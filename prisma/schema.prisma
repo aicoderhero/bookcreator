@@ -10,98 +10,86 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./db/bookcreator.db"
+  url      = env("DATABASE_URL")
 }
 
 model Admin {
   id        String   @id @default(cuid())
   username  String   @unique
   password  String   // encrypted password
-  email     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Author {
-  id          String   @id @default(cuid())
-  name        String
-  role        String   // e.g., "Penulis", "Editor", "Penulis Tambahan", etc.
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Many-to-many relationship with books
-  books BookAuthor[]
-
-  @@map("authors")
+  id        String   @id @default(cuid())
+  name      String
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  books     BookAuthor[]
 }
 
 model Book {
   id          String   @id @default(cuid())
   title       String
-  isbn        String?  @unique
   description String?
-  coverImage  String?  // path to cover image
-  published   Boolean  @default(false)
+  isbn        String?
+  coverArt    String?  // path to cover image
+  isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  // Relationships
-  authors  BookAuthor[]
-  chapters Chapter[]
-
-  @@map("books")
+  
+  authors     BookAuthor[]
+  chapters    Chapter[]
 }
 
 model BookAuthor {
   id       String @id @default(cuid())
   bookId   String
   authorId String
-
-  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  author Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
+  
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
   @@unique([bookId, authorId])
-  @@map("book_authors")
 }
 
 model Chapter {
-  id        String   @id @default(cuid())
-  title     String
-  order     Int      // order of chapters in the book
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relationships
-  bookId String
-  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  pages  Page[]
-
-  @@map("chapters")
+  id          String   @id @default(cuid())
+  title       String
+  description String?  // optional description for the chapter
+  order       Int
+  bookId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  book        Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  pages       Page[]
+  
+  @@unique([bookId, order])
 }
 
 model Page {
   id        String   @id @default(cuid())
-  title     String?
-  content   String   // Markdown/HTML content
-  order     Int      // order of pages in the chapter
+  content   String
+  order     Int
+  chapterId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  // Relationships
-  chapterId String
+  
   chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-
-  @@map("pages")
+  
+  @@unique([chapterId, order])
 }
 
-model SiteSettings {
+model Settings {
   id          String   @id @default(cuid())
-  key         String   @unique
-  value       String
-  description String?
-  createdAt   DateTime @default(now())
+  siteTitle   String   @default("Book Engine")
+  logo        String?  // path to logo image
+  homeContent String?  // content for home page
+  metaTitle   String?
+  metaDesc    String?
   updatedAt   DateTime @updatedAt
-
-  @@map("site_settings")
 }

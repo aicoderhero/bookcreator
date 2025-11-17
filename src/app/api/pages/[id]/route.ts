@@ -12,22 +12,17 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const book = await db.book.findUnique({
-      where: { id: params.id },
+    const { id } = await params;
+
+    const page = await db.page.findUnique({
+      where: { id },
       include: {
-        authors: {
-          include: {
-            author: true
-          }
-        },
-        chapters: {
-          orderBy: {
-            order: 'asc'
-          },
-          include: {
-            _count: {
+        chapter: {
+          select: {
+            title: true,
+            book: {
               select: {
-                pages: true
+                title: true
               }
             }
           }
@@ -35,16 +30,16 @@ export async function GET(
       }
     });
 
-    if (!book) {
+    if (!page) {
       return NextResponse.json(
-        { error: 'Book not found' },
+        { error: 'Page not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(book);
+    return NextResponse.json(page);
   } catch (error) {
-    console.error('Error fetching book:', error);
+    console.error('Error fetching page:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -62,39 +57,46 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { title, description, isbn, authorIds, isPublished, coverArt } = await request.json();
+    const { content, order } = await request.json();
+    const { id } = await params;
 
-    const book = await db.book.update({
-      where: { id: params.id },
-      data: {
-        ...(title !== undefined && { title }),
-        ...(description !== undefined && { description }),
-        ...(isbn !== undefined && { isbn }),
-        ...(isPublished !== undefined && { isPublished }),
-        ...(coverArt !== undefined && { coverArt }),
-        ...(authorIds !== undefined && {
-          authors: {
-            deleteMany: {},
-            create: authorIds.map((authorId: string) => ({
-              author: {
-                connect: { id: authorId }
-              }
-            }))
-          }
-        })
-      },
+    // Check if the page exists
+    const existingPage = await db.page.findUnique({
+      where: { id }
+    });
+
+    if (!existingPage) {
+      return NextResponse.json(
+        { error: 'Page not found' },
+        { status: 404 }
+      );
+    }
+
+    const updateData: any = {};
+    
+    if (content !== undefined) updateData.content = content;
+    if (order !== undefined) updateData.order = parseInt(order);
+
+    const page = await db.page.update({
+      where: { id },
+      data: updateData,
       include: {
-        authors: {
-          include: {
-            author: true
+        chapter: {
+          select: {
+            title: true,
+            book: {
+              select: {
+                title: true
+              }
+            }
           }
         }
       }
     });
 
-    return NextResponse.json(book);
+    return NextResponse.json(page);
   } catch (error) {
-    console.error('Error updating book:', error);
+    console.error('Error updating page:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -112,13 +114,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await db.book.delete({
-      where: { id: params.id }
+    const { id } = await params;
+
+    await db.page.delete({
+      where: { id }
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting book:', error);
+    console.error('Error deleting page:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

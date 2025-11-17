@@ -3,56 +3,60 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface Author {
+interface Page {
   id: string;
-  name: string;
-  bio?: string;
+  content: string;
+  order: number;
+  chapterId: string;
   createdAt: string;
   updatedAt: string;
-  _count: {
-    books: number;
+  chapter: {
+    title: string;
+    book: {
+      title: string;
+    };
   };
 }
 
-export default function EditAuthorPage() {
+export default function EditPagePage() {
   const [formData, setFormData] = useState({
-    name: '',
-    bio: '',
+    content: '',
+    order: 1,
   });
-  const [author, setAuthor] = useState<Author | null>(null);
+  const [page, setPage] = useState<Page | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
   const params = useParams();
 
   useEffect(() => {
-    fetchAuthor();
+    fetchPage();
   }, [params.id]);
 
-  const fetchAuthor = async () => {
+  const fetchPage = async () => {
     try {
-      const response = await fetch(`/api/authors/${params.id}`);
+      const response = await fetch(`/api/pages/${params.id}`);
       if (response.ok) {
-        const data: Author = await response.json();
-        setAuthor(data);
+        const data: Page = await response.json();
+        setPage(data);
         setFormData({
-          name: data.name,
-          bio: data.bio || '',
+          content: data.content,
+          order: data.order,
         });
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to fetch author');
+        setError(errorData.error || 'Failed to fetch page');
       }
     } catch (error) {
-      console.error('Error fetching author:', error);
+      console.error('Error fetching page:', error);
       setError('Network error. Please try again.');
     }
   };
@@ -61,7 +65,7 @@ export default function EditAuthorPage() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: name === 'order' ? parseInt(value) : value
     }));
   };
 
@@ -71,7 +75,7 @@ export default function EditAuthorPage() {
     setError('');
 
     try {
-      const response = await fetch(`/api/authors/${params.id}`, {
+      const response = await fetch(`/api/pages/${params.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -80,20 +84,20 @@ export default function EditAuthorPage() {
       });
 
       if (response.ok) {
-        router.push('/admin/authors');
+        router.push('/admin/pages');
       } else {
         const data = await response.json();
-        setError(data.error || 'Failed to update author');
+        setError(data.error || 'Failed to update page');
       }
     } catch (error) {
-      console.error('Update author error:', error);
+      console.error('Update page error:', error);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!author) {
+  if (!page) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -102,17 +106,19 @@ export default function EditAuthorPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href="/admin/authors">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Kembali ke Penulis
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Edit Penulis</h1>
-          <p className="text-gray-600">Edit informasi penulis</p>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Link href="/admin/pages">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Kembali ke Halaman
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Edit Halaman</h1>
+            <p className="text-gray-600">Edit konten halaman</p>
+          </div>
         </div>
       </div>
 
@@ -125,37 +131,40 @@ export default function EditAuthorPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Informasi Penulis</CardTitle>
+            <CardTitle>Informasi Halaman</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="name">Nama *</Label>
+              <Label htmlFor="order">Urutan *</Label>
               <Input
-                id="name"
-                name="name"
-                type="text"
+                id="order"
+                name="order"
+                type="number"
                 required
-                value={formData.name}
+                min="1"
+                value={formData.order}
                 onChange={handleInputChange}
-                placeholder="Masukkan nama penulis"
+                placeholder="Masukkan urutan halaman"
               />
             </div>
 
             <div>
-              <Label htmlFor="bio">Biografi</Label>
+              <Label htmlFor="content">Konten *</Label>
               <Textarea
-                id="bio"
-                name="bio"
-                value={formData.bio}
+                id="content"
+                name="content"
+                required
+                value={formData.content}
                 onChange={handleInputChange}
-                placeholder="Masukkan biografi penulis"
-                rows={6}
+                placeholder="Masukkan konten halaman"
+                rows={12}
               />
             </div>
 
             <div className="text-sm text-gray-500">
-              <p>Buku terkait: {author._count.books}</p>
-              <p>Dibuat: {new Date(author.createdAt).toLocaleDateString('id-ID')}</p>
+              <p>Bab: {page?.chapter?.title}</p>
+              <p>Buku: {page?.chapter?.book?.title}</p>
+              <p>Dibuat: {new Date(page?.createdAt).toLocaleDateString('id-ID')}</p>
             </div>
           </CardContent>
         </Card>
@@ -164,7 +173,7 @@ export default function EditAuthorPage() {
           <Button
             type="submit"
             className="flex-1"
-            disabled={loading || !formData.name}
+            disabled={loading || !formData.content}
           >
             {loading ? (
               <div className="flex items-center">
@@ -174,11 +183,11 @@ export default function EditAuthorPage() {
             ) : (
               <>
                 <Save className="w-4 h-4 mr-2" />
-                Simpan Penulis
+                Simpan Halaman
               </>
             )}
           </Button>
-          <Link href="/admin/authors">
+          <Link href="/admin/pages">
             <Button variant="outline">Batal</Button>
           </Link>
         </div>

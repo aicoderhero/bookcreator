@@ -1,174 +1,140 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ArrowLeft, Save, User } from 'lucide-react'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft, Save, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-export default function NewAuthor() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  
+export default function NewAuthorPage() {
   const [formData, setFormData] = useState({
     name: '',
-    role: '',
-    description: ''
-  })
+    bio: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
-  const checkAuth = () => {
-    const token = localStorage.getItem('adminToken')
-    if (!token) {
-      router.push('/admin/login')
-    }
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    if (!formData.name.trim()) {
-      setError('Name is required')
-      setLoading(false)
-      return
-    }
-
-    if (!formData.role.trim()) {
-      setError('Role is required')
-      setLoading(false)
-      return
-    }
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
     try {
-      const token = localStorage.getItem('adminToken')
-      const response = await fetch('/api/admin/authors', {
+      const response = await fetch('/api/authors', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name,
-          role: formData.role,
-          description: formData.description || null
-        }),
-      })
+        body: JSON.stringify(formData),
+      });
 
       if (response.ok) {
-        router.push('/admin/dashboard?tab=authors')
+        router.push('/admin/authors');
       } else {
-        const data = await response.json()
-        setError(data.error || 'Failed to create author')
+        const data = await response.json();
+        setError(data.error || 'Failed to create author');
       }
     } catch (error) {
-      setError('An error occurred while creating the author')
+      setError('Network error. Please try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/admin/dashboard?tab=authors">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <div className="flex items-center space-x-2">
-                <User className="h-6 w-6 text-primary" />
-                <h1 className="text-xl font-bold">Add New Author</h1>
-              </div>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="flex items-center space-x-4">
+        <Link href="/admin/authors">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Authors
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Create New Author</h1>
+          <p className="text-gray-600">Add a new author to your library</p>
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <User className="w-5 h-5 mr-2" />
+              Author Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                required
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="Enter author name"
+              />
             </div>
-          </div>
+
+            <div>
+              <Label htmlFor="bio">Biography</Label>
+              <Textarea
+                id="bio"
+                name="bio"
+                value={formData.bio}
+                onChange={handleInputChange}
+                placeholder="Enter author biography (optional)"
+                rows={6}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex space-x-3">
+          <Button
+            type="submit"
+            className="flex-1"
+            disabled={loading || !formData.name}
+          >
+            {loading ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Creating...
+              </div>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Create Author
+              </>
+            )}
+          </Button>
+          <Link href="/admin/authors">
+            <Button variant="outline">Cancel</Button>
+          </Link>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New Author</CardTitle>
-              <CardDescription>
-                Fill in the author details below. All fields marked with * are required.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter author name"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role *</Label>
-                  <Input
-                    id="role"
-                    type="text"
-                    value={formData.role}
-                    onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                    placeholder="e.g., Penulis, Editor, Penulis Tambahan"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Enter author description (optional)"
-                    rows={4}
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-4">
-                  <Link href="/admin/dashboard?tab=authors">
-                    <Button variant="outline" type="button">
-                      Cancel
-                    </Button>
-                  </Link>
-                  <Button type="submit" disabled={loading}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {loading ? 'Creating...' : 'Create Author'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+      </form>
     </div>
-  )
+  );
 }
