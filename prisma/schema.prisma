@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./db/bookcreator.db"
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // encrypted password
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Author {
+  id          String   @id @default(cuid())
+  name        String
+  role        String   // e.g., "Penulis", "Editor", "Penulis Tambahan", etc.
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Many-to-many relationship with books
+  books BookAuthor[]
+
+  @@map("authors")
+}
+
+model Book {
+  id          String   @id @default(cuid())
+  title       String
+  isbn        String?  @unique
+  description String?
+  coverImage  String?  // path to cover image
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  authors  BookAuthor[]
+  chapters Chapter[]
+
+  @@map("books")
+}
+
+model BookAuthor {
+  id       String @id @default(cuid())
+  bookId   String
+  authorId String
+
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, authorId])
+  @@map("book_authors")
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  title     String
+  order     Int      // order of chapters in the book
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  bookId String
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  pages  Page[]
+
+  @@map("chapters")
+}
+
+model Page {
+  id        String   @id @default(cuid())
+  title     String?
+  content   String   // Markdown/HTML content
+  order     Int      // order of pages in the chapter
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  chapterId String
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@map("pages")
+}
+
+model SiteSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("site_settings")
+}
